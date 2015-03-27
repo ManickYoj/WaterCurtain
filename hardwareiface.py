@@ -10,6 +10,7 @@ IDEA: Clients for submitting patterns in democratized way.
 
 # ----- IMPORTS ----- #
 import serial
+import time
 import queue as q
 
 # ----- HARDWARE CONSTANTS ----- #
@@ -20,20 +21,21 @@ OFF_DURATION = 0.5  # Duration off between pattern rows
 # ----- PATTERN CLASS ----- #
 class Pattern:
     PLAY = {
-        "loop" : -1
+        "loop" : -1,
         "stop" : 0
     }
 
-    def __init__ (pattern, invert=true, alignment=None):
+    def __init__ (self, pattern, invert=True, alignment=None):
         """
         Takes in a pattern (list of lists, formatted [row][column])
         of true/false or 1/0 values and loads it in for use by the
         play or loop functions.
         """
 
-        self.pattern = align(pattern)
+        self.pattern = self.align(pattern)
         self.pattern = self.pattern[::-1] # Reverse the vertical alignment of the pattern
         self.play_counter = 0
+        register(self)
 
 
     def align (self, pattern, alignment=None):
@@ -44,12 +46,11 @@ class Pattern:
         for the number of solenoids available.
         """
 
-        cols = len(self.pattern[0])
+        cols = len(pattern[0])
 
-        #  Center the
-        if cols >= COLS:
+        if cols > COLS:
             raise Exception("Columns in pattern exceed the number of solenoids available.")
-        elif cols == COLS-1:  # If the pattern is the same length as the number of available solenoids
+        elif cols == COLS:  # If the pattern is the same length as the number of available solenoids
             return pattern
         else:
              # TODO: Align pattern by pushing it left, right, or centered if undersized
@@ -59,7 +60,7 @@ class Pattern:
                 return pattern
 
     def play (self, times=1):
-        self.play_counter = Pattern.PLAY[times]
+        self.play_counter = times
 
     def loop (self):
         self.play_counter = Pattern.PLAY["loop"]
@@ -83,13 +84,16 @@ def runpattern (pattern):
             else: rowstr += " "
 
         print(rowstr)
+        # Turn on
+        time.sleep(ON_DURATION)
+        # Turn off
+        time.sleep(OFF_DURATION)
 
 def run ():
     counter = 0;
 
     while True:
-        if counter == len(pattern_queues): counter = 0
-        else:
+        if len(pattern_queues) > 0:
             # If the play-counter has a finite number of plays
             if pattern_queues[counter].play_counter > 0:
                 runpattern(pattern_queues[counter].pattern)
@@ -99,17 +103,21 @@ def run ():
             elif pattern_queues[counter].play_counter < 0:
                 runpattern(pattern_queues[counter].pattern)
 
-        counter += 1
+            counter += 1
+            if counter == len(pattern_queues): counter = 0
+
 
 
 # ----- SCRIPT ---- #
-run()
+import threading
+threading.Thread(target=run).start()
 
 # ----- TESTING CODE ----- #
 if __name__ == "__main__":
-    #
-    p = [[True for cols in range(COLS)] for rows in range(COLS)]
+    p = [[True for cols in range(COLS)] for rows in range(5)]
     pattern = Pattern(p)
     pattern.play(1)
 
-
+    import csvinput as csvi
+    csvpattern = Pattern(csvi.load('testpattern.csv'))
+    csvpattern.play(1)
