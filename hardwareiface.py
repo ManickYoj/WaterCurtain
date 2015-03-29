@@ -12,14 +12,13 @@ IDEA: Clients for submitting patterns in democratized way.
 # ----- CONFIG ----- #
 # Software Settings
 COLS = 10  # Number of solenoids available
-ON_DURATION = 0.25  # Duration on per pattern row
-OFF_DURATION = 0.5  # Duration off between pattern rows
-PIN_OFFSET = 0  # Number of first pin hooked up on the Arduino
+ON_DURATION = 1  # Duration on per pattern row
+OFF_DURATION = 2  # Duration off between pattern rows
+PIN_OFFSET = 2  # Number of first pin hooked up on the Arduino
 
 # Hardware Settings
-TEST_MODE = True  # Switches between testing and operation modes
-USB_PORT = '/dev/ttyUSB1'  # The port address of the Arduino
-
+TEST_MODE = False  # Switches between testing and operation modes
+USB_PORT = '/dev/ttyACM0'  # The port address of the Arduino
 
 # ----- IMPORTS ----- #
 import arduino
@@ -28,7 +27,9 @@ import queue as q
 
 # -----  CONSTANTS ----- #
 CLEAR_ROW = [False for i in range(COLS)]
-if not TEST_MODE: BOARD = arduino.Arduino(USB_PORT)
+if not TEST_MODE:
+    BOARD = arduino.Arduino(USB_PORT)
+    BOARD.output([i for i in range(PIN_OFFSET, PIN_OFFSET+COLS)])
 
 # ----- PATTERN CLASS ----- #
 class Pattern:
@@ -120,6 +121,7 @@ def testpattern (pattern):
 
 def runpattern (pattern):
     for row in pattern:
+        print(row)
         # Turn on
         setPins(row)
         time.sleep(ON_DURATION)
