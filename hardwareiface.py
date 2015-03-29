@@ -3,20 +3,32 @@ hardwareiface.py
 ----------------
 
 The interface which allows patterns to be played on the
-water curtain.
+water curtain. At present, the USB_PORT field will need
+to be changed frequently.
 
 IDEA: Clients for submitting patterns in democratized way.
 """
 
+# ----- CONFIG ----- #
+# Software Settings
+COLS = 10  # Number of solenoids available
+ON_DURATION = 0.25  # Duration on per pattern row
+OFF_DURATION = 0.5  # Duration off between pattern rows
+PIN_OFFSET = 0  # Number of first pin hooked up on the Arduino
+
+# Hardware Settings
+TEST_MODE = True  # Switches between testing and operation modes
+USB_PORT = '/dev/ttyUSB1'  # The port address of the Arduino
+
+
 # ----- IMPORTS ----- #
-import serial
+import arduino
 import time
 import queue as q
 
-# ----- HARDWARE CONSTANTS ----- #
-COLS = 20  # Number of solenoids available
-ON_DURATION = 0.25  # Duration on per pattern row
-OFF_DURATION = 0.5  # Duration off between pattern rows
+# -----  CONSTANTS ----- #
+CLEAR_ROW = [False for i in range(COLS)]
+if not TEST_MODE: BOARD = arduino.Arduino(USB_PORT)
 
 # ----- PATTERN CLASS ----- #
 class Pattern:
@@ -74,8 +86,25 @@ def register (pattern):
 def unregister (pattern):
     del pattern_queues[pattern]
 
-def runpattern (pattern):
-    # TODO: Link this to hardware here
+def run ():
+    patternop = testpattern if TEST_MODE else runpattern
+    counter = 0;
+
+    while True:
+        if len(pattern_queues) > 0:
+            # If the play-counter has a finite number of plays
+            if pattern_queues[counter].play_counter > 0:
+                patternop(pattern_queues[counter].pattern)
+                pattern_queues[counter].play_counter -= 1
+
+            # If the play-counter is looping
+            elif pattern_queues[counter].play_counter < 0:
+                patternop(pattern_queues[counter].pattern)
+
+            counter += 1
+            if counter == len(pattern_queues): counter = 0
+
+def testpattern (pattern):
     for row in pattern:
         rowstr = ""
 
@@ -89,23 +118,22 @@ def runpattern (pattern):
         # Turn off
         time.sleep(OFF_DURATION)
 
-def run ():
-    counter = 0;
+def runpattern (pattern):
+    for row in pattern:
+        # Turn on
+        setPins(row)
+        time.sleep(ON_DURATION)
 
-    while True:
-        if len(pattern_queues) > 0:
-            # If the play-counter has a finite number of plays
-            if pattern_queues[counter].play_counter > 0:
-                runpattern(pattern_queues[counter].pattern)
-                pattern_queues[counter].play_counter -= 1
+        # Turn off
+        setPins(CLEAR_ROW)
+        time.sleep(OFF_DURATION)
 
-            # If the play-counter is looping
-            elif pattern_queues[counter].play_counter < 0:
-                runpattern(pattern_queues[counter].pattern)
 
-            counter += 1
-            if counter == len(pattern_queues): counter = 0
-
+def setPins(row):
+    for i in range(len(row)):
+        pin = i + PIN_OFFSET
+        if row[i]: BOARD.setHigh(pin)
+        else: BOARD.setLow(pin)
 
 
 # ----- SCRIPT ---- #
