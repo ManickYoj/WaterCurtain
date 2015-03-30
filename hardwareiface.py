@@ -12,8 +12,8 @@ IDEA: Clients for submitting patterns in democratized way.
 # ----- CONFIG ----- #
 # Software Settings
 COLS = 10  # Number of solenoids available
-ON_DURATION = 1  # Duration on per pattern row
-OFF_DURATION = 2  # Duration off between pattern rows
+ON_DURATION = 60  # Duration on per pattern row
+OFF_DURATION = .05  # Duration off between pattern rows
 PIN_OFFSET = 2  # Number of first pin hooked up on the Arduino
 
 # Hardware Settings
@@ -146,8 +146,11 @@ threading.Thread(target=run).start()
 if __name__ == "__main__":
     p = [[True for cols in range(COLS)] for rows in range(5)]
     pattern = Pattern(p)
-    pattern.play(1)
-
-    import csvinput as csvi
-    csvpattern = Pattern(csvi.load('testpattern.csv'))
-    csvpattern.play(1)
+    pattern.play(100)
+#    
+#    import csvinput as csvi
+#    csvpattern = Pattern(csvi.load('alternating.csv'))
+#    csvpattern.play(1000)
+#    
+#    csvpattern2 = Pattern(csvi.load('testpattern.csv'))
+#    csvpattern2.play(1000)
