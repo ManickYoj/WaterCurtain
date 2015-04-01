@@ -1,35 +1,29 @@
 """
-hardwareiface.py
+core.py
 ----------------
 
 The interface which allows patterns to be played on the
-water curtain. At present, the USB_PORT field will need
-to be changed frequently.
+water curtain. It uses the config.ini file to load in
+user configuration.
 
-IDEA: Clients for submitting patterns in democratized way.
 """
-
-# ----- CONFIG ----- #
-# Software Settings
-COLS = 10  # Number of solenoids available
-ON_DURATION = 60  # Duration on per pattern row
-OFF_DURATION = .05  # Duration off between pattern rows
-PIN_OFFSET = 2  # Number of first pin hooked up on the Arduino
-
-# Hardware Settings
-TEST_MODE = False  # Switches between testing and operation modes
-USB_PORT = '/dev/ttyACM0'  # The port address of the Arduino
 
 # ----- IMPORTS ----- #
 import arduino
 import time
 import queue as q
+import configloader
 
-# -----  CONSTANTS ----- #
-CLEAR_ROW = [False for i in range(COLS)]
-if not TEST_MODE:
-    BOARD = arduino.Arduino(USB_PORT)
-    BOARD.output([i for i in range(PIN_OFFSET, PIN_OFFSET+COLS)])
+# ---- IMPORT CONFIG ----- #
+config = configloader.loadconfig()
+config['cols'] = int(config['cols'])
+config['pin_offset'] = int(config['pin_offset'])
+
+# -----  GLOBAL VARIABLES ----- #
+empty_row = [False for i in range(config['cols'])]
+if not config['test_mode']:
+    board = arduino.Arduino(config['usb_port'])
+    board.output([i for i in range(config['pin_offset'], config['pin_offset']+config['cols'])])
 
 # ----- PATTERN CLASS ----- #
 class Pattern:
@@ -61,9 +55,9 @@ class Pattern:
 
         cols = len(pattern[0])
 
-        if cols > COLS:
+        if cols > config['cols']:
             raise Exception("Columns in pattern exceed the number of solenoids available.")
-        elif cols == COLS:  # If the pattern is the same length as the number of available solenoids
+        elif cols == config['cols']:  # If the pattern is the same length as the number of available solenoids
             return pattern
         else:
              # TODO: Align pattern by pushing it left, right, or centered if undersized
@@ -88,7 +82,7 @@ def unregister (pattern):
     del pattern_queues[pattern]
 
 def run ():
-    patternop = testpattern if TEST_MODE else runpattern
+    patternop = testpattern if config['test_mode'] else runpattern
     counter = 0;
 
     while True:
@@ -115,42 +109,44 @@ def testpattern (pattern):
 
         print(rowstr)
         # Turn on
-        time.sleep(ON_DURATION)
+        time.sleep(config['on_duration'])
         # Turn off
-        time.sleep(OFF_DURATION)
+        time.sleep(config['off_duration'])
 
 def runpattern (pattern):
     for row in pattern:
         print(row)
         # Turn on
         setPins(row)
-        time.sleep(ON_DURATION)
+        time.sleep(config['on_duration'])
 
         # Turn off
         setPins(CLEAR_ROW)
-        time.sleep(OFF_DURATION)
+        time.sleep(config['off_duration'])
 
 
 def setPins(row):
     for i in range(len(row)):
-        pin = i + PIN_OFFSET
-        if row[i]: BOARD.setHigh(pin)
-        else: BOARD.setLow(pin)
+        pin = i + config['pin_offset']
+        if row[i]: board.setHigh(pin)
+        else: board.setLow(pin)
 
-
-# ----- SCRIPT ---- #
-import threading
-threading.Thread(target=run).start()
 
 # ----- TESTING CODE ----- #
 if __name__ == "__main__":
-    p = [[True for cols in range(COLS)] for rows in range(5)]
+    import threading
+    threading.Thread(target=run).start()
+
+    # Test play method directly
+    p = [[True for cols in range(config['cols'])] for rows in range(5)]
     pattern = Pattern(p)
-    pattern.play(100)
-#    
-#    import csvinput as csvi
-#    csvpattern = Pattern(csvi.load('alternating.csv'))
-#    csvpattern.play(1000)
-#    
-#    csvpattern2 = Pattern(csvi.load('testpattern.csv'))
-#    csvpattern2.play(1000)
+    pattern.play(10)
+
+    # Test CSV Imports
+    import patterninputs as csvi
+    import os
+    csvpattern = Pattern(csvi.load(os.path.join('patterns','alternating.csv')))
+    csvpattern.play(10)
+
+    csvpattern2 = Pattern(csvi.load(os.path.join('patterns','diagonal.csv')))
+    csvpattern2.play(10)

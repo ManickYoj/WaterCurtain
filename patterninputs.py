@@ -1,3 +1,13 @@
+"""
+patterninputs.py
+----------------
+
+A place to create new input methods which can load in
+patterns to be used by the core module.
+
+"""
+
+
 import csv
 
 def load (filename):
