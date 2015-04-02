@@ -1,5 +1,8 @@
 // Downloaded from vascop's Arduino Prototype library on Github
 
+// This sketch runs a loop that looks for serial input from
+// a computer and uses it to control the Arduino's output.
+
 #ifndef SERIAL_RATE
 #define SERIAL_RATE         115200
 #endif
