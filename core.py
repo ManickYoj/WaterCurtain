@@ -121,7 +121,7 @@ def runpattern (pattern):
         time.sleep(config['on_duration'])
 
         # Turn off
-        setPins(CLEAR_ROW)
+        setPins(empty_row)
         time.sleep(config['off_duration'])
 
 
